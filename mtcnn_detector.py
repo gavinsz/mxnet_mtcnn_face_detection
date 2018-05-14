@@ -238,11 +238,15 @@ class MtcnnDetector(object):
         
         sliced_index = self.slice_index(len(scales))
         total_boxes = []
+        #print('sliced_index=', sliced_index)
         for batch in sliced_index:
             local_boxes = self.Pool.map( detect_first_stage_warpper, \
                     zip(repeat(img), self.PNets[:len(batch)], [scales[i] for i in batch], repeat(self.threshold[0])) )
             total_boxes.extend(local_boxes)
         
+        #self.Pool.close()
+        #self.Pool.join()
+
         # remove the Nones 
         total_boxes = [ i for i in total_boxes if i is not None]
 
