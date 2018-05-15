@@ -7,7 +7,7 @@ import cv2
 from multiprocessing import Pool
 from itertools import repeat
 #from itertools import izip 
-from helper import nms, adjust_input, generate_bbox, detect_first_stage_warpper
+from helper import nms, adjust_input, generate_bbox, detect_first_stage_warpper, detect_first_stage
 
 
 class MtcnnDetector(object):
@@ -19,7 +19,7 @@ class MtcnnDetector(object):
     def __init__(self,
                  model_folder='.',
                  minsize = 20,
-                 threshold = [0.6, 0.7, 0.8],
+                 threshold = [0.5, 0.6, 0.7, 0.8],
                  factor = 0.709,
                  num_worker = 1,
                  accurate_landmark = False,
@@ -64,8 +64,7 @@ class MtcnnDetector(object):
         self.minsize   = float(minsize)
         self.factor    = float(factor)
         self.threshold = threshold
-
-
+        
     def convert_to_square(self, bbox):
         """
             convert bbox to square
@@ -211,6 +210,8 @@ class MtcnnDetector(object):
         # only works for color image
         if len(img.shape) != 3:
             return None
+        
+        #print('img.shape=', img.shape)
 
         # detected boxes
         total_boxes = []
@@ -227,28 +228,26 @@ class MtcnnDetector(object):
             scales.append(m*self.factor**factor_count)
             minl *= self.factor
             factor_count += 1
-
+        #print('factor_count=', factor_count)
+        #print('scales=', scales)
         #############################################
         # first stage
         #############################################
-        #for scale in scales:
-        #    return_boxes = self.detect_first_stage(img, scale, 0)
-        #    if return_boxes is not None:
-        #        total_boxes.append(return_boxes)
-        
+        for scale in scales:
+            return_boxes = detect_first_stage(img, self.PNets[0], scale, self.threshold[0])
+            if return_boxes is not None:
+                total_boxes.append(return_boxes)
+        '''
         sliced_index = self.slice_index(len(scales))
         total_boxes = []
-        #print('sliced_index=', sliced_index)
         for batch in sliced_index:
             local_boxes = self.Pool.map( detect_first_stage_warpper, \
                     zip(repeat(img), self.PNets[:len(batch)], [scales[i] for i in batch], repeat(self.threshold[0])) )
             total_boxes.extend(local_boxes)
-        
-        #self.Pool.close()
-        #self.Pool.join()
 
         # remove the Nones 
         total_boxes = [ i for i in total_boxes if i is not None]
+        '''
 
         if len(total_boxes) == 0:
             return None
