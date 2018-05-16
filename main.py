@@ -8,7 +8,8 @@ import re
 import numpy as np
 
 re_poseIllum = re.compile('_\d{3}_\d{2}')
-out_put_path = 'E:\Multi-PIE\session01\cropped'
+src_path = 'E:\Multi-PIE\session02\multiview'
+out_put_path = 'E:\Multi-PIE\session02\cropped'
 
 def is_normal_illumination(fullpath):
     #print('fullpath=', fullpath)
@@ -25,7 +26,7 @@ def get_file_list(path):
     g = os.walk(path)
     s = []
     for path, dir_list, file_list in g:
-        if path[-7:-5] == '02':
+        if path[-7:-5] != '01':
             continue
 
         if path[-4:] == '19_1':
@@ -65,6 +66,9 @@ def gen_5pt(img, five_pt_text_file):
             for i in range(5):
                 print(p[i], p[i+5])
             '''
+            #y0, x0
+            #five_pt_array = np.array([(p[5], p[0]), (p[6], p[1]), (p[7], p[2]), (p[8], p[3]), (p[9], p[4])])
+            #x0, y0, x1, y1....
             five_pt_array = np.array([(p[0], p[5]), (p[1], p[6]), (p[2], p[7]), (p[3], p[8]), (p[4], p[9])])
             np.savetxt(five_pt_text_file, five_pt_array, fmt='%d', newline='\n')
 
@@ -73,7 +77,7 @@ def crop_img(detector, img_path):
     if img is None:
         return
         
-    print('img_path=', img_path)
+    #print('img_path=', img_path)
     #img = cv2.imread('oscar1.jpg')
     # run detector
     results = detector.detect_face(img)
@@ -90,7 +94,7 @@ def crop_img(detector, img_path):
             cropped_img_path = out_put_path + '\\' + dst_name
             
             cv2.imwrite(cropped_img_path, chip)
-            print('saved', cropped_img_path)
+            print('saved cropped %s succ'%(cropped_img_path))
 
             five_pt_text_file = cropped_img_path[:-4] + '.5pt'
             gen_5pt(chip, five_pt_text_file)
@@ -108,24 +112,24 @@ def crop_img(detector, img_path):
         cv2.imshow("detection result", draw)
         cv2.waitKey(0)
         '''
-    else:
-        print('face detected failed')
+    #else:
+    #    print('face detected failed')
 
-if __name__ == '__main__':
-    path = 'E:\Multi-PIE\session01\multiview'
-    s = get_file_list(path)
-
+if __name__ == '__main__':    
+    s = get_file_list(src_path)
+    count = 0;
     detector = MtcnnDetector(model_folder='model', ctx=mx.cpu(0), num_worker = 1 , accurate_landmark = False)
     for img_path in s:
+        count += 1
         cropped_file = get_cropped_img_name(img_path)
         cropped_file = os.path.join(out_put_path, cropped_file)
         #print('exits', cropped_file, os.path.exists(cropped_file))
-        #if False == os.path.exists(cropped_file):
-        #    crop_img(detector, img_path)
-        crop_img(detector, img_path)
-
+        if False == os.path.exists(cropped_file):
+            crop_img(detector, img_path)
+        
+        print('cropping %d/%d' %(count, len(s)), end='\r')
     print('cropped completed!')
-    exit(0)
+    exit(1)
 
     
 # --------------

@@ -19,7 +19,7 @@ class MtcnnDetector(object):
     def __init__(self,
                  model_folder='.',
                  minsize = 20,
-                 threshold = [0.5, 0.6, 0.7, 0.8],
+                 threshold = [0.9, 0.7, 0.8],
                  factor = 0.709,
                  num_worker = 1,
                  accurate_landmark = False,
