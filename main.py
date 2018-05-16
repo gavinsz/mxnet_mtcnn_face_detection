@@ -1,15 +1,25 @@
 # coding: utf-8
 import mxnet as mx
 from mtcnn_detector import MtcnnDetector
+from cv2_detector import Cv2FaceDetector
 import cv2
 import os
 import time
 import re
 import numpy as np
+import logging
+
+# 通过下面的方式进行简单配置输出方式与日志级别
+#logging.basicConfig(filename='logger.log', level=logging.INFO)
+logging.basicConfig(filename='logger.log', 
+                    format='%(asctime)s %(levelname)s [%(filename)s:%(lineno)d] %(message)s', 
+                    level = logging.INFO,
+                    filemode='a',
+                    datefmt='%Y-%m-%d %I:%M:%S %p')
 
 re_poseIllum = re.compile('_\d{3}_\d{2}')
-src_path = 'E:\Multi-PIE\session02\multiview'
-out_put_path = 'E:\Multi-PIE\session02\cropped'
+src_path = 'E:\Multi-PIE\session01\multiview'
+out_put_path = 'E:\Multi-PIE\session01\cropped1'
 
 def is_normal_illumination(fullpath):
     #print('fullpath=', fullpath)
@@ -72,7 +82,7 @@ def gen_5pt(img, five_pt_text_file):
             five_pt_array = np.array([(p[0], p[5]), (p[1], p[6]), (p[2], p[7]), (p[3], p[8]), (p[4], p[9])])
             np.savetxt(five_pt_text_file, five_pt_array, fmt='%d', newline='\n')
 
-def crop_img(detector, img_path):
+def crop_img(detector, cv2_face_detector, img_path):
     img = cv2.imread(img_path)
     if img is None:
         return
@@ -93,12 +103,15 @@ def crop_img(detector, img_path):
             dst_name = get_cropped_img_name(img_path)
             cropped_img_path = out_put_path + '\\' + dst_name
             
-            cv2.imwrite(cropped_img_path, chip)
-            print('saved cropped %s succ'%(cropped_img_path))
+            if cv2_face_detector.face_detected(chip) is False:
+                logging.error('face detected %s failed'%(img_path))
+            else:
+                cv2.imwrite(cropped_img_path, chip)
+                logging.info('saved cropped %s succ'%(cropped_img_path))
 
-            five_pt_text_file = cropped_img_path[:-4] + '.5pt'
-            gen_5pt(chip, five_pt_text_file)
-            print('save five pt %s succ'%(five_pt_text_file))  
+                five_pt_text_file = cropped_img_path[:-4] + '.5pt'
+                gen_5pt(chip, five_pt_text_file)
+                logging.info('save five pt %s succ'%(five_pt_text_file))
 
         '''
         draw = img.copy()
@@ -118,6 +131,7 @@ def crop_img(detector, img_path):
 if __name__ == '__main__':    
     s = get_file_list(src_path)
     count = 0;
+    cv2_face_detector = Cv2FaceDetector()
     detector = MtcnnDetector(model_folder='model', ctx=mx.cpu(0), num_worker = 1 , accurate_landmark = False)
     for img_path in s:
         count += 1
@@ -125,7 +139,7 @@ if __name__ == '__main__':
         cropped_file = os.path.join(out_put_path, cropped_file)
         #print('exits', cropped_file, os.path.exists(cropped_file))
         if False == os.path.exists(cropped_file):
-            crop_img(detector, img_path)
+            crop_img(detector, cv2_face_detector, img_path)
         
         print('cropping %d/%d' %(count, len(s)), end='\r')
     print('cropped completed!')
