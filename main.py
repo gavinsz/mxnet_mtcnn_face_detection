@@ -18,8 +18,8 @@ logging.basicConfig(filename='logger.log',
                     datefmt='%Y-%m-%d %I:%M:%S %p')
 
 re_poseIllum = re.compile('_\d{3}_\d{2}')
-src_path = 'E:\Multi-PIE\session01\multiview'
-out_put_path = 'E:\Multi-PIE\session01\cropped1'
+src_path = 'E:\Multi-PIE\session04\multiview'
+out_put_path = 'E:\Multi-PIE\session04\cropped_align'
 
 def is_normal_illumination(fullpath):
     #print('fullpath=', fullpath)
@@ -82,6 +82,19 @@ def gen_5pt(img, five_pt_text_file):
             five_pt_array = np.array([(p[0], p[5]), (p[1], p[6]), (p[2], p[7]), (p[3], p[8]), (p[4], p[9])])
             np.savetxt(five_pt_text_file, five_pt_array, fmt='%d', newline='\n')
 
+def conver_point(p):
+    key_points = []
+    for k in range(len(p)//2):
+        key_points.append(p[k])
+        key_points.append(p[k+5])
+    
+    return key_points
+
+def save_5pt(p, save_name):
+    #x0, y0, x1, y1....
+    five_pt_array = np.array([(p[0], p[1]), (p[2], p[3]), (p[4], p[5]), (p[6], p[7]), (p[8], p[9])])
+    np.savetxt(save_name, five_pt_array, fmt='%d', newline='\n')
+
 def crop_img(detector, cv2_face_detector, img_path):
     img = cv2.imread(img_path)
     if img is None:
@@ -95,6 +108,25 @@ def crop_img(detector, cv2_face_detector, img_path):
         total_boxes = results[0]
         points = results[1]
         
+        #print('points=', points)
+        for p in points:
+            key_points = conver_point(p)
+            chip, five_points = detector.align(img, key_points, 128, 48, 40)
+            five_points = np.resize(five_points, 10)
+
+            dst_name = get_cropped_img_name(img_path)
+            cropped_img_path = out_put_path + '\\' + dst_name
+            #if cv2_face_detector.face_detected(chip) is False:
+            #    logging.error('face detected %s failed'%(img_path))
+            #else:
+            cv2.imwrite(cropped_img_path, chip)
+            logging.info('saved cropped %s succ'%(cropped_img_path))
+
+            five_pt_text_file = cropped_img_path[:-4] + '.5pt'
+            save_5pt(five_points, five_pt_text_file)
+            logging.info('save five pt %s succ'%(five_pt_text_file))
+
+        '''
         # extract aligned face chips
         chips = detector.extract_image_chips(img, points, 128, 0.37)
         for i, chip in enumerate(chips):
@@ -112,6 +144,8 @@ def crop_img(detector, cv2_face_detector, img_path):
                 five_pt_text_file = cropped_img_path[:-4] + '.5pt'
                 gen_5pt(chip, five_pt_text_file)
                 logging.info('save five pt %s succ'%(five_pt_text_file))
+        '''
+
 
         '''
         draw = img.copy()
